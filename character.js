@@ -1,6 +1,6 @@
 import * as T from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/loaders/GLTFLoader.js';
-import {getCharacter,DEFAULT_CHARACTER_ID} from './characters.js';
+import {getCharacter,DEFAULT_CHARACTER_ID} from './characters.js?v=3';
 import {createThrusters} from './thrusters.js?v=2';
 
 // Animated Mech Pack (March 2021), supplied by the user. Quaternius, CC0 1.0.
