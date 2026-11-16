@@ -2,7 +2,7 @@ import qrcode from './vendor/qrcode.js';
 import * as T from './vendor/three.module.js';
 import {sweepVehicle,onVehicleRoof,impactPlaneFor} from './physics.js';
 import {CityAudio} from './audio.js';
-import {loadCharacter} from './character.js';
+import {loadCharacter} from './character.js?v=2';
 import {DEFAULT_CHARACTER_ID, getCharacter} from './characters.js';
 import {createInkRenderer} from './toon.js';
 import {loadCityAssets,installCityAssets,createIntersectionBackdrop} from './city.js';

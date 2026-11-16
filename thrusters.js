@@ -1,8 +1,7 @@
 import * as T from './vendor/three.module.js';
 
-// Stan's compact back-mounted turbines follow the animated chest bone.
+// Compact back-mounted turbines follow each robot's animated chest bone.
 export function createThrusters(model,definition){
- if(definition.id!=='stan')return null;
  const chest=model.getObjectByName('Chest');if(!chest)return null;
  const ink=new T.MeshToonMaterial({color:'#35283f'}),shell=new T.MeshToonMaterial({color:'#f5f1ff',emissive:'#f5f1ff',emissiveIntensity:.16}),accent=new T.MeshToonMaterial({color:'#ac84e5'}),nozzle=new T.MeshToonMaterial({color:'#807790'});
  const assembly=new T.Group(),pods=[],particles=[],plumes=[];
@@ -27,6 +26,9 @@ export function createThrusters(model,definition){
    particles.push({sprite,side,age:1,life:.56});
   }
  }
+ // The models have different proportions in their original coordinate systems.
+ const placement={stan:{scale:1,y:4.15,z:-1.08},mike:{scale:1.05,y:4.18,z:-1.17},george:{scale:.85,y:4.06,z:-.77},leela:{scale:.72,y:3.35,z:-.68}}[definition.id];
+ if(placement){assembly.scale.setScalar(placement.scale);assembly.position.set(0,placement.y-4.15*placement.scale,placement.z+1.08*placement.scale);}
  model.add(assembly);model.updateMatrixWorld(true);chest.attach(assembly);
  let emitting=false,elapsed=0,serial=0,phase=0;
  function release(){for(const side of [-1,1]){const puff=particles.find(p=>p.side===side&&!p.sprite.visible);if(!puff)continue;const n=serial++%7;puff.age=0;puff.life=.68+n*.04;puff.drift=(n-3)*.22;puff.wobble=n*.9;puff.sprite.position.set((n-3)*.18,-.54,-.08);puff.sprite.scale.set(.55,.60,1);puff.sprite.material.rotation=n*.9;puff.sprite.material.opacity=.2;puff.sprite.visible=true;}}

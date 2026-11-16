@@ -1,7 +1,7 @@
 import * as T from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/loaders/GLTFLoader.js';
 import {getCharacter,DEFAULT_CHARACTER_ID} from './characters.js';
-import {createThrusters} from './thrusters.js';
+import {createThrusters} from './thrusters.js?v=2';
 
 // Animated Mech Pack (March 2021), supplied by the user. Quaternius, CC0 1.0.
 // Skeleton and authored clips are preserved; only materials and game scale change.
