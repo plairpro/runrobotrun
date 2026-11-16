@@ -1,3 +1,4 @@
+import qrcode from './vendor/qrcode.js';
 import * as T from './vendor/three.module.js';
 import {sweepVehicle,onVehicleRoof,impactPlaneFor} from './physics.js';
 import {CityAudio} from './audio.js';
@@ -103,37 +104,24 @@ function advanceLane(dt){
 function togglePause(){if(state==='playing'){state='paused';sound.pause();$('pause').textContent='Продолжить'}else if(state==='paused'){state='playing';sound.start();$('pause').textContent='Пауза'}}
 // Registration stays in memory until the run's result is saved.
 const resultEndpoint='https://openscaler-run-results-26.timurfazullin.chatgpt.site';
-let registration={alias:'',answers:[]},quizStage='alias',selectedOption=null,resultVersion=0,pendingResult=null,runToken=null;
-const questions=[
- {title:'Что тебе интереснее создавать?',options:['Открытые системы и инструменты','Умные решения с ИИ']},
- {title:'Как ты подходишь к задаче?',options:['Исследую и экспериментирую','Собираю надёжное решение']}
-];
-const quizCharacters=[['stan','leela'],['mike','george']];
-function showQuiz(stage){
- quizStage=stage;selectedOption=registration.answers[stage==='question1'?0:1]??null;
+let registration={alias:'',character:''},resultVersion=0,pendingResult=null,runToken=null,pairVersion=0;
+function drawPairQR(url){const qr=qrcode(0,'M');qr.addData(url);qr.make();const n=qr.getModuleCount(),scale=5,margin=4,canvas=$('pair-qr');canvas.width=canvas.height=(n+margin*2)*scale;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#160c20';for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(qr.isDark(y,x))ctx.fillRect((x+margin)*scale,(y+margin)*scale,scale,scale);}
+async function beginPair(){
+ const version=++pairVersion;runToken=null;registration={alias:'',character:''};
  $('modal').hidden=false;$('result').hidden=true;$('caption').hidden=true;$('quiz').hidden=false;$('save-status').hidden=true;$('save-retry').hidden=true;$('quiz-error').hidden=true;
- $('telegram').hidden=stage!=='alias';$('quiz-options').hidden=!stage.startsWith('question');$('quiz-character').hidden=stage!=='character';$('quiz-back').hidden=stage==='alias';
- $('quiz-step').textContent=stage==='alias'?'Перед стартом':stage==='question1'?'Вопрос 1 из 2':stage==='question2'?'Вопрос 2 из 2':'Твой персонаж';
- $('title').classList.toggle('quiz-title',stage!=='alias');$('title').textContent=stage==='alias'?'Беги, робот, беги!':stage==='character'?'Робот готов к забегу':questions[stage==='question1'?0:1].title;
- $('quiz-label').textContent=stage==='alias'?'Твой Telegram':' ';$('quiz-label').hidden=stage!=='alias';
- $('quiz-hint').textContent=stage==='alias'?'Укажи имя пользователя, чтобы мы могли связаться с победителем. Имя и результат появятся в списке организаторов.':'';
- $('telegram').value=registration.alias;$('quiz-options').replaceChildren();
- if(stage.startsWith('question')){const q=questions[stage==='question1'?0:1];q.options.forEach((option,i)=>{const button=document.createElement('button');button.type='button';button.className='quiz-option';button.textContent=option;button.setAttribute('aria-pressed',String(selectedOption===i));button.onclick=()=>{selectedOption=i;for(const [j,node] of Array.from($('quiz-options').children).entries())node.setAttribute('aria-pressed',String(j===i));$('quiz-error').hidden=true;};$('quiz-options').append(button);});}
- if(stage==='character')$('quiz-character').textContent=getCharacter(quizCharacters[registration.answers[0]][registration.answers[1]]).name;
- $('start').textContent=stage==='character'?'Начать забег':'Далее';
+ $('telegram').hidden=true;$('quiz-label').hidden=true;$('quiz-options').hidden=true;$('quiz-character').hidden=true;$('quiz-back').hidden=true;$('pair-qr').hidden=true;$('pair-link').hidden=true;$('start').hidden=true;
+ $('title').classList.remove('quiz-title');$('title').textContent='Беги, робот, беги!';$('quiz-step').textContent='Вход через Telegram';$('quiz-hint').textContent='Подключаем Telegram…';
+ try{const response=await fetch(resultEndpoint+'/api/pair/create',{method:'POST',cache:'no-store'});const pair=await response.json();if(!response.ok||!pair.id||!pair.secret||!pair.bot)throw Error();if(version!==pairVersion)return;
+ const url=`https://t.me/${pair.bot}?start=${pair.id}`;drawPairQR(url);$('pair-qr').hidden=false;$('pair-link').href=url;$('pair-link').hidden=false;$('quiz-hint').textContent='Отсканируй QR-код, открой бота и ответь на два вопроса. Имя и результат увидят организаторы.';
+ async function poll(){if(version!==pairVersion)return;try{const response=await fetch(resultEndpoint+'/api/pair/status',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({id:pair.id,secret:pair.secret}),cache:'no-store'});const data=await response.json();if(!response.ok)throw Error();if(version!==pairVersion)return;if(data.status==='expired'){beginPair();return;}if(data.status==='ready'&&data.alias&&data.character&&data.token){pairVersion++;registration={alias:data.alias,character:data.character};runToken=data.token;$('pair-qr').hidden=true;$('pair-link').hidden=true;$('quiz-step').textContent='Всё готово';$('title').classList.add('quiz-title');$('title').textContent='Робот готов к забегу';$('quiz-hint').textContent='@'+data.alias;$('quiz-character').textContent=getCharacter(data.character).name;$('quiz-character').hidden=false;$('start').hidden=false;$('start').disabled=true;$('start').textContent='Загружаем робота…';if(await prepareCharacter(data.character))$('start').textContent='Начать забег';else{$('start').textContent='Повторить загрузку';$('quiz-error').textContent='Не удалось загрузить робота. Попробуй ещё раз.';$('quiz-error').hidden=false;}return;}}catch{}setTimeout(poll,1400);}
+ poll();
+ }catch{if(version!==pairVersion)return;$('quiz-hint').textContent='Не удалось подключиться к Telegram. Проверь соединение и попробуй ещё раз.';$('start').hidden=false;$('start').disabled=false;$('start').textContent='Попробовать снова';}
 }
 async function advanceQuiz(){
- if(state==='won'||state==='lost'){resultVersion++;pendingResult=null;runToken=null;registration={alias:'',answers:[]};state='ready';sound.pause();for(const o of objects)o.mesh.visible=false;objects=[];for(const m of intersections)scene.remove(m.group);intersections.length=0;for(const b of blocks){b.visible=true;b.userData.surface.visible=true;if(b.userData.cityObjects)b.userData.cityObjects.visible=true;}for(const p of sparks)p.sprite.visible=false;finish.visible=false;time=distance=lane=px=lateralSpeed=height=velocity=score=0;robot.position.set(0,0,0);impactPlane=null;document.body.classList.remove('game-won');showQuiz('alias');await prepareCharacter();return;}
- if(quizStage==='alias'){const alias=$('telegram').value.trim().replace(/^@/,'');if(!/^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(alias)){$('quiz-error').textContent='Введите имя пользователя Telegram: от 5 до 32 латинских букв, цифр или знаков подчёркивания.';$('quiz-error').hidden=false;return;}registration.alias=alias;showQuiz('question1');return;}
- if(quizStage==='question1'||quizStage==='question2'){if(selectedOption===null){$('quiz-error').textContent='Выбери один вариант ответа.';$('quiz-error').hidden=false;return;}const n=quizStage==='question1'?0:1;registration.answers[n]=selectedOption;showQuiz(n===0?'question2':'character');if(n===1){const id=quizCharacters[registration.answers[0]][registration.answers[1]];$('start').textContent='Загружаем робота…';if(await prepareCharacter(id))$('start').textContent='Начать забег';else{$('start').textContent='Повторить загрузку';$('quiz-error').textContent='Не удалось загрузить робота. Попробуй ещё раз.';$('quiz-error').hidden=false;}}return;}
- if(!assetReady){$('start').textContent='Загружаем робота…';if(!await prepareCharacter(quizCharacters[registration.answers[0]][registration.answers[1]])){$('quiz-error').textContent='Не удалось загрузить робота. Попробуй ещё раз.';$('quiz-error').hidden=false;$('start').textContent='Повторить загрузку';return;}}
- $('start').disabled=true;$('quiz-back').disabled=true;$('start').textContent='Подключаем забег…';
- try{sound.init();if(sound.ctx?.state==='suspended')sound.ctx.resume();const response=await fetch(resultEndpoint+'/api/start',{cache:'no-store'});const data=await response.json();if(!response.ok||typeof data.token!=='string')throw new Error('No run token');runToken=data.token;reset();}
- catch(error){$('quiz-error').textContent='Не удалось подключиться к игре. Проверь соединение и попробуй ещё раз.';$('quiz-error').hidden=false;$('start').textContent='Попробовать снова';}
- finally{$('start').disabled=false;$('quiz-back').disabled=false;}
+ if(state==='won'||state==='lost'){resultVersion++;pendingResult=null;runToken=null;state='ready';sound.pause();for(const o of objects)o.mesh.visible=false;objects=[];for(const m of intersections)scene.remove(m.group);intersections.length=0;for(const b of blocks){b.visible=true;b.userData.surface.visible=true;if(b.userData.cityObjects)b.userData.cityObjects.visible=true;}for(const p of sparks)p.sprite.visible=false;finish.visible=false;time=distance=lane=px=lateralSpeed=height=velocity=score=0;robot.position.set(0,0,0);impactPlane=null;document.body.classList.remove('game-won');beginPair();return;}
+ if(!runToken){beginPair();return;}if(!assetReady||loadedCharacterId!==registration.character){$('start').textContent='Загружаем робота…';if(!await prepareCharacter(registration.character)){$('quiz-error').textContent='Не удалось загрузить робота. Попробуй ещё раз.';$('quiz-error').hidden=false;$('start').textContent='Повторить загрузку';return;}}
+ sound.init();if(sound.ctx?.state==='suspended')sound.ctx.resume();reset();
 }
-$('quiz-back').onclick=()=>showQuiz(quizStage==='character'?'question2':quizStage==='question2'?'question1':'alias');
-$('telegram').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(!$('start').disabled)advanceQuiz();}});
 async function submitResult(){
  const version=++resultVersion;$('save-retry').hidden=true;
  if(!pendingResult)pendingResult={alias:registration.alias,score,token:runToken};
@@ -241,5 +229,5 @@ function animate(dt,clock){
  camera.position.x=T.MathUtils.damp(camera.position.x,px*.25,4,dt);camera.position.y=T.MathUtils.damp(camera.position.y,3.2+height*.22,5,dt);camera.lookAt(px*.2,1.2+height*.1,-12);
 }
 let previous=0;function frame(now){requestAnimationFrame(frame);let dt=Math.min(.05,(now-previous)/1000||0);previous=now;pollGamepads();if(state==='playing'){let n=Math.ceil(dt/(1/120));for(let i=0;i<n&&state==='playing';i++)update(dt/n);sound.update(objects,px,height,grounded(),time,dt);}if(state!=='paused')animate(dt,now/1000);inkRenderer.setHeatHaze(character?.thrusters?.pods,(state==='playing'||state==='paused')&&!grounded(),time);inkRenderer.render()}requestAnimationFrame(frame);
-showQuiz('alias');prepareCharacter().then(ok=>{if(!ok){$('quiz-error').textContent='Не удалось загрузить игру. Обнови страницу.';$('quiz-error').hidden=false;}});
+beginPair();
 export {update,reset,scene,renderer,objects,coinPool};
