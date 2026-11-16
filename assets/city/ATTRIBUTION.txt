@@ -1,0 +1,14 @@
+© 2026 Greanapple Games. All rights reserved.
+
+Royalty-free license: you may use these assets in unlimited commercial and non-commercial games, apps, renders and videos.
+You may modify them. You may NOT resell, redistribute, or sublicense the asset files themselves (modified or not) as assets,
+or include them in other asset packs, template projects or AI training datasets.
+No attribution required (appreciated: "Assets by Greanapple Games").
+
+CREDITS - Downtown City Kit
+Models, layout and the leaf texture: Greanapple Games (procedural, built in Blender 4.2.3).
+PBR textures: Poly Haven (https://polyhaven.com), CC0 1.0 public domain (https://polyhaven.com/license).
+red_brick_03, yellow_brick, white_sandstone_blocks_02, concrete_wall_008, concrete_floor_02,
+asphalt_02, concrete_pavement, metal_plate, bark_brown_02, fine_grained_wood.
+Preview lighting HDRI (renders only, not shipped): kloofendal_48d_partly_cloudy_puresky, Poly Haven, CC0.
+No attribution is legally required for CC0. We credit Poly Haven anyway.
